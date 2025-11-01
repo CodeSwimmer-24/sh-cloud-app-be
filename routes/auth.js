@@ -7,27 +7,42 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Register new user (Admin only)
+// Register new user (Public - No authentication required)
 router.post('/register',
-  authenticateToken,
   [
-    body('username').isLength({ min: 3 }).withMessage('Username must be at least 3 characters'),
+    body('username')
+      .isLength({ min: 3 }).withMessage('Username must be at least 3 characters')
+      .matches(/^[a-zA-Z0-9_]+$/).withMessage('Username can only contain letters, numbers, and underscores')
+      .custom((value) => {
+        if (/^\d+$/.test(value)) {
+          throw new Error('Username cannot contain only numbers');
+        }
+        return true;
+      }),
     body('email').isEmail().withMessage('Valid email required'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+    body('password')
+      .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+      .custom((value) => {
+        if (/^\d+$/.test(value)) {
+          throw new Error('Password cannot contain only numbers');
+        }
+        if (/^[a-zA-Z]+$/.test(value)) {
+          throw new Error('Password should include at least one number or special character');
+        }
+        return true;
+      })
   ],
   async (req, res) => {
     try {
-      // Check if user is admin
-      if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Only admins can create users' });
-      }
-
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { username, email, password, role = 'user' } = req.body;
+      const { username, email, password, role } = req.body;
+
+      // Public registration - always set role to 'user' (prevent self-admin registration)
+      const userRole = 'user';
 
       // Check if user already exists
       const existingUser = await User.findOne({
@@ -45,7 +60,7 @@ router.post('/register',
         username,
         email,
         password,
-        role
+        role: userRole
       });
 
       res.status(201).json({

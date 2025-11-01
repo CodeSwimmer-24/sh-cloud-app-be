@@ -25,7 +25,7 @@ const syncDatabase = async () => {
       await User.create({
         username: 'admin',
         email: 'admin@example.com',
-        password: 'admin123', // Will be hashed by the model hook
+        password: 'hanzlaharoon@999', // Will be hashed by the model hook
         role: 'admin'
       });
       console.log('Default admin user created (username: admin, password: admin123)');
